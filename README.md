@@ -8,7 +8,9 @@ The dataset comes from the classic [Kaggle Titanic competition](https://www.kagg
 
 ## 📂 Project Structure
 ├── mode.py# Trained model files (exported from Kaggle)
+
 ├── Model # Jupyter Notebook (training + evaluation)
+
 ├── README.md # Project documentation
 
 
