@@ -38,5 +38,3 @@ Try advanced models (XGBoost, LightGBM, Neural Nets)
 
 Add visualization of survival probabilities
 
-Deploy as a simple web app using Flask or Streamlit
----
