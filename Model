@@ -1,0 +1,230 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "c4004ab6",
+   "metadata": {
+    "_cell_guid": "b1076dfc-b9ad-4769-8c92-a6c4dae69d19",
+    "_uuid": "8f2839f25d086af736a60e9eeb907d3b93b6e0e5",
+    "execution": {
+     "iopub.execute_input": "2025-09-06T17:38:22.090572Z",
+     "iopub.status.busy": "2025-09-06T17:38:22.090214Z",
+     "iopub.status.idle": "2025-09-06T17:38:23.879722Z",
+     "shell.execute_reply": "2025-09-06T17:38:23.878701Z"
+    },
+    "papermill": {
+     "duration": 1.7946,
+     "end_time": "2025-09-06T17:38:23.881282",
+     "exception": false,
+     "start_time": "2025-09-06T17:38:22.086682",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "/kaggle/input/titanic/train.csv\n",
+      "/kaggle/input/titanic/test.csv\n",
+      "/kaggle/input/titanic/gender_submission.csv\n"
+     ]
+    }
+   ],
+   "source": [
+    "# This Python 3 environment comes with many helpful analytics libraries installed\n",
+    "# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python\n",
+    "# For example, here's several helpful packages to load\n",
+    "\n",
+    "import numpy as np # linear algebra\n",
+    "import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)\n",
+    "\n",
+    "# Input data files are available in the read-only \"../input/\" directory\n",
+    "# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory\n",
+    "\n",
+    "import os\n",
+    "for dirname, _, filenames in os.walk('/kaggle/input'):\n",
+    "    for filename in filenames:\n",
+    "        print(os.path.join(dirname, filename))\n",
+    "\n",
+    "# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using \"Save & Run All\" \n",
+    "# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "ae368c26",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2025-09-06T17:38:23.886088Z",
+     "iopub.status.busy": "2025-09-06T17:38:23.885695Z",
+     "iopub.status.idle": "2025-09-06T17:38:25.807211Z",
+     "shell.execute_reply": "2025-09-06T17:38:25.806465Z"
+    },
+    "papermill": {
+     "duration": 1.926907,
+     "end_time": "2025-09-06T17:38:25.810053",
+     "exception": false,
+     "start_time": "2025-09-06T17:38:23.883146",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['Sex', 'Ticket', 'Cabin', 'Embarked']\n",
+      "Train acc: 0.836 (595/712)\n",
+      "Valid acc: 0.816 (146/179)\n",
+      "a\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/usr/local/lib/python3.11/dist-packages/sklearn/preprocessing/_encoders.py:202: UserWarning: Found unknown categories in columns [1, 2] during transform. These unknown categories will be encoded as all zeros\n",
+      "  warnings.warn(\n",
+      "/usr/local/lib/python3.11/dist-packages/sklearn/preprocessing/_encoders.py:202: UserWarning: Found unknown categories in columns [1, 2] during transform. These unknown categories will be encoded as all zeros\n",
+      "  warnings.warn(\n"
+     ]
+    }
+   ],
+   "source": [
+    "from sklearn.model_selection import train_test_split\n",
+    "from  sklearn.pipeline import Pipeline\n",
+    "from sklearn.impute import SimpleImputer\n",
+    "from sklearn.preprocessing import OneHotEncoder\n",
+    "from xgboost import XGBClassifier\n",
+    "from sklearn.metrics import accuracy_score\n",
+    "from sklearn.compose import ColumnTransformer\n",
+    "df = pd.read_csv(\"/kaggle/input/titanic/train.csv\")\n",
+    "df = df.copy()\n",
+    "\n",
+    "num_tf = SimpleImputer(strategy=\"median\", add_indicator = True)\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n",
+    "\n",
+    "target = \"Survived\"\n",
+    "\n",
+    "ids = df[\"PassengerId\"].copy()\n",
+    "\n",
+    "X = df.drop(columns= [target,\"PassengerId\",\"Name\"])\n",
+    "\n",
+    "y = df[target]\n",
+    "\n",
+    "cat_cols = [col for col in X if X[col].dtypes==\"object\"]\n",
+    "print(cat_cols)\n",
+    "num_cols = X.select_dtypes(include=[\"number\"]).columns.tolist()\n",
+    "\n",
+    "cat_tf= Pipeline ([\n",
+    "    (\"imp\", SimpleImputer(strategy=\"most_frequent\",add_indicator= True)),\n",
+    "    (\"ohe\",OneHotEncoder(\n",
+    "        handle_unknown=\"ignore\",\n",
+    "        drop =\"if_binary\",\n",
+    "        min_frequency = 0.01,\n",
+    "        sparse_output =False\n",
+    "    ))\n",
+    "])\n",
+    "\n",
+    "pre = ColumnTransformer([\n",
+    "    (\"num\",num_tf,num_cols),\n",
+    "    (\"cat\",cat_tf,cat_cols),\n",
+    "    \n",
+    "])\n",
+    "\n",
+    "\n",
+    "pipe  = Pipeline([\n",
+    "    (\"pre\",pre),\n",
+    "    (\"clf\",XGBClassifier(n_estimators = 2 , max_depth =2, learning_rate = 1))])\n",
+    "\n",
+    "\n",
+    "X_train , X_valid , y_train, y_valid = train_test_split(X,y,test_size= .2)\n",
+    "\n",
+    "pipe.fit(X_train,y_train)\n",
+    "\n",
+    "y_pred_tr=  pipe.predict(X_train)\n",
+    "y_pred_v = pipe.predict(X_valid)\n",
+    "\n",
+    "# accuracies (ratio + count)\n",
+    "print(f\"Train acc: {accuracy_score(y_train, y_pred_tr):.3f} \"\n",
+    "      f\"({accuracy_score(y_train, y_pred_tr, normalize=False)}/{len(y_train)})\")\n",
+    "\n",
+    "print(f\"Valid acc: {accuracy_score(y_valid, y_pred_v):.3f} \"\n",
+    "      f\"({accuracy_score(y_valid, y_pred_v, normalize=False)}/{len(y_valid)})\")\n",
+    "\n",
+    "test = pd.read_csv(\"/kaggle/input/titanic/test.csv\")\n",
+    "\n",
+    "id = test[\"PassengerId\"].copy()\n",
+    "X_test= test.drop(columns=[\"Name\"])\n",
+    "\n",
+    "# y_test= test[target]\n",
+    "\n",
+    "test_pred  = pipe.predict(X_test).astype(int)\n",
+    "\n",
+    "\n",
+    "sub = pd.DataFrame({\n",
+    "    \"PassengerId\":test[\"PassengerId\"].values,\n",
+    "    \"Survived\":test_pred\n",
+    "})\n",
+    "print(\"a\")\n",
+    "sub.to_csv(\"/kaggle/working/submission.csv\",index=False)\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [
+    {
+     "datasetId": 8127904,
+     "sourceId": 12850804,
+     "sourceType": "datasetVersion"
+    }
+   ],
+   "dockerImageVersionId": 31089,
+   "isGpuEnabled": false,
+   "isInternetEnabled": false,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.13"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 9.471346,
+   "end_time": "2025-09-06T17:38:26.531630",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2025-09-06T17:38:17.060284",
+   "version": "2.6.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
